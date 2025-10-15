@@ -1,0 +1,33 @@
+{
+  "name": "vehicle-checker",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "set NODE_ENV=production && node dist/index.js",
+    "build": "tsc && tsc-alias",
+    "dev": "ts-node src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "bullmq": "^5.61.0",
+    "dotenv": "^17.2.3",
+    "got": "^14.5.0",
+    "grammy": "^1.38.3",
+    "ioredis": "^5.8.1",
+    "linkedom": "^0.18.12",
+    "mongoose": "^8.19.1",
+    "tesseract.js": "^6.0.1",
+    "tough-cookie": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.3",
+    "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.16",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.8.3"
+  }
+}

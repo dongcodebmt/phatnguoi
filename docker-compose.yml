@@ -1,0 +1,28 @@
+services:
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  phatnguoi:
+    image: ghcr.io/dongcodebmt/phatnguoi:latest
+    container_name: phatnguoi
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./.env:/app/.env
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: on-failure
