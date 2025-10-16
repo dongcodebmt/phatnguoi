@@ -26,13 +26,13 @@ export class JobsService {
   private readonly schedulerId: string = 'daily-scheduler';
   private readonly limiter = {
     max: 1,
-    duration: 5 * 60 * 1000, // 1 request per 5 minutes
+    duration: 60 * 1000, // 1 request per 1 minutes
   };
   private readonly queueOpts = {
-    attempts: 100,
+    attempts: 60 * 24,
     backoff: {
       type: 'fixed',
-      delay: 5 * 60 * 1000,
+      delay: 60 * 1000,
     },
   };
 
@@ -240,7 +240,7 @@ export class JobsService {
   }
 
   private async saveViolation(plate: IPlate, data: IViolationRaw): Promise<IViolation> {
-    const status = data.plateColor.toLowerCase() === States[Status.Punished].toLowerCase() ? Status.Punished : Status.NotPunished;
+    const status = data.status.toLowerCase() === States[Status.Punished].toLowerCase() ? Status.Punished : Status.NotPunished;
     let violation = await Violation.findOne({ plate: plate, timeOfViolation: data.timeOfViolation });
 
     if (violation) {

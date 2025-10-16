@@ -2,7 +2,7 @@ import { Composer, InlineKeyboard, Context } from 'grammy';
 import { Queue } from 'bullmq';
 import User, { IUser } from '@/models/user';
 import Plate, { IPlate } from '@/models/plate';
-import Violatio, { IViolation } from '@/models/violation';
+import Violatio from '@/models/violation';
 import Register from '@/models/register';
 import Unverified from '@/models/unverified';
 import { VehicleType } from '@/enums';
@@ -15,10 +15,10 @@ export class Integraions {
   private queueId: string;
   public composer = new Composer();
   private readonly queueOpts = {
-    attempts: 100,
+    attempts: 60 * 24,
     backoff: {
       type: 'fixed',
-      delay: 5 * 60 * 1000,
+      delay: 60 * 1000,
     },
   };
 
