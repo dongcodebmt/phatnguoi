@@ -1,7 +1,6 @@
 import { VehicleType, Status } from '@/enums';
 
 export const vehicleTypes = {
-  [VehicleType.Unknown]: 'Không xác định ❓',
   [VehicleType.Car]: 'Ô tô 🚗',
   [VehicleType.Motorcycle]: 'Xe máy 🏍️',
   [VehicleType.ElectricBike]: 'Xe đạp điện 🚲'

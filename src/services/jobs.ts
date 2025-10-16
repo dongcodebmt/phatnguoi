@@ -101,12 +101,14 @@ export class JobsService {
       async (job) => {
         const { plateId, vehicleType } = job.data;
 
-        const violation = await this.saveCrawlData(plateId, vehicleType);
-        if (!violation) {
+        const violations = await this.saveCrawlData(plateId, vehicleType);
+        if (violations.length === 0) {
           return;
         }
-
-        await this.sendNotification(violation);
+        
+        for (const violation of violations) {
+          await this.sendNotification(violation);
+        }
         console.log(`[WORKER] Done ${plateId}`);
       },
       {
@@ -126,25 +128,29 @@ export class JobsService {
       this.unverifiedQueueId,
       async (job) => {
         const { plateId, vehicleType } = job.data;
-        const violation = await this.saveCrawlData(plateId, vehicleType);
-        if (!violation) {
+        const violations = await this.saveCrawlData(plateId, vehicleType);
+        if (violations.length === 0) {
           return;
         }
 
+        const plate = await Plate.findOne({ plateId });
         const unverifieds = await Unverified.find({ plateId }).populate('user');
         for (const unverified of unverifieds) {
-          let register = await Register.findOne({ user: unverified.user, plate: violation.plate });
+          let register = await Register.findOne({ user: unverified.user, plate: plate });
 
           if (!register) {
             register = await new Register({
               user: unverified.user,
-              plate: violation.plate,
+              plate: plate,
             }).save();
           }
           await unverified.deleteOne().exec();
         }
 
-        this.sendNotification(violation);
+        
+        for (const violation of violations) {
+          await this.sendNotification(violation);
+        }
         console.log(`[WORKER] Done ${plateId}`);
       },
       {
@@ -160,16 +166,17 @@ export class JobsService {
     });
   }
 
-  private async saveCrawlData(plateId: string, vehicleType: VehicleType): Promise<IViolation | undefined> {
+  private async saveCrawlData(plateId: string, vehicleType: VehicleType): Promise<IViolation[]> {
+    const list: IViolation[] = [];
     const violationRaws = await this.checker.getDataAsync(plateId, vehicleType);
     if (violationRaws.length > 0) {
       const plate = await this.savePlate(plateId, vehicleType, violationRaws[0]);
       for (const violationRaw of violationRaws) {
         const violation = await this.saveViolation(plate, violationRaw);
-        return violation;
+        list.push(violation);
       }
     }
-    return undefined;
+    return list;
   }
 
   // private async getUnnotifiedViolations(user: IUser): Promise<IViolation[]> {

@@ -2,11 +2,13 @@ import { Composer, InlineKeyboard, Context } from 'grammy';
 import { Queue } from 'bullmq';
 import User, { IUser } from '@/models/user';
 import Plate, { IPlate } from '@/models/plate';
+import Violatio, { IViolation } from '@/models/violation';
 import Register from '@/models/register';
 import Unverified from '@/models/unverified';
 import { VehicleType } from '@/enums';
 import { vehicleTypes } from '@/constants/consts';
 import commands from './commands';
+import { buildViolationMessage } from '@/utils';
 
 export class Integraions {
   private queue: Queue;
@@ -101,14 +103,40 @@ export class Integraions {
       await ctx.reply('Chọn biển số để xóa:', { reply_markup: keyboard });
     });
 
+    
+    this.composer.command('check', async (ctx) => {
+      const userId = ctx.from?.id;
+      if (!userId) return;
+
+      const user = await this.user(userId);
+      const plates = await this.getPlates(user);
+
+      if (plates.length === 0) {
+        await ctx.reply('🚫 Không có biển số nào để kiểm tra vi phạm');
+        return;
+      }
+
+      const keyboard = new InlineKeyboard();
+      plates.forEach(item => {
+        keyboard.text(`${item.plateNumber} (${vehicleTypes[item.vehicleType]})`, `check_${item.id}`).row();
+      });
+
+      await ctx.reply('Chọn biển số để kiểm tra vi phạm:', { reply_markup: keyboard });
+    });
+
 
     this.composer.callbackQuery(/^vehicle_(\d+)_(.+)$$/, async (ctx) => {
       const type = ctx.match![1] as unknown as VehicleType;
-      const plateId = ctx.match![2];
+      const plateId = ctx.match![2].toUpperCase().replaceAll(' ','').replaceAll('.','').replaceAll('-','');
       const userId = ctx.from?.id;
 
       if (!userId || !plateId || !type) return;
       const user = await this.user(userId);
+
+      if (!this.validatePlate(plateId, type)) {
+        await ctx.reply('🚫 Biển số không hợp lệ');
+        return;
+      }
 
       // Biển số đã xác nhận thì đăng ký cho user luôn
       const plate = await Plate.findOne({ plateId: plateId });
@@ -135,7 +163,7 @@ export class Integraions {
           plateId: plateId,
           vehicleType: type,
         }).save();
-        
+
         // Add to queue
         await this.queue.add(this.queueId, unverified, this.queueOpts);
       }
@@ -160,7 +188,33 @@ export class Integraions {
           `🗑️ Đã xóa: ${result.plateNumber} (${vehicleTypes[result.vehicleType]})`
         );
       } else {
+        await ctx.answerCallbackQuery({ text: '❌ Không tìm thấy biển số này', show_alert: true });
+      }
+    });
+
+    this.composer.callbackQuery(/^check_(\w+)$/, async (ctx) => {
+      const id = ctx.match![1];
+      const userId = ctx.from?.id;
+      if (!userId || !id) return;
+
+      const unverified = await Unverified.findById(id);
+      if (unverified) {
+        await ctx.answerCallbackQuery();
+        await ctx.reply(`✅ Biển số ${unverified.plateId} không có vi phạm)`);
+      }
+      const plate = await Plate.findById(id);
+      if (!plate) {
         await ctx.answerCallbackQuery({ text: '❌ Không tìm thấy biển số', show_alert: true });
+      }
+      const violations = await Violatio.find({ plate }).sort({ timeOfViolation: -1 }).populate('plate');
+      if (violations.length === 0) {
+        await ctx.answerCallbackQuery();
+        await ctx.reply(`✅ Biển số ${plate?.plateNumber} không có vi phạm)`);
+      }
+
+      await ctx.answerCallbackQuery();
+      for (const violation of violations) {
+        await ctx.reply(buildViolationMessage(violation, false));
       }
     });
   }
@@ -212,5 +266,15 @@ export class Integraions {
       await unverified.deleteOne().exec();
     }
     return plate;
+  }
+
+  private validatePlate(plateNumber: string, vehicleType: VehicleType): boolean {
+    const patterns = {
+      [VehicleType.Car]: /^[0-9]{2}[A-Z]{1}[0-9]{4,5}$/,          // Ô tô: 2 số + 1 chữ cái + 4–5 số
+      [VehicleType.Motorcycle]: /^[0-9]{2}[A-Z]{1}[0-9]{5,6}$/,   // Xe máy: 2 số + 1 chữ cái + 5–6 số
+      [VehicleType.ElectricBike]: /^[0-9]{2}[A-Z]{2}[0-9]{5,6}$/  // Xe đạp điện: 2 số + 2 chữ cái + 5–6 số
+    };
+    const pattern = patterns[vehicleType];
+    return pattern.test(plateNumber);
   }
 }
