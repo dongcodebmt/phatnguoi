@@ -200,16 +200,19 @@ export class Integraions {
       const unverified = await Unverified.findById(id);
       if (unverified) {
         await ctx.answerCallbackQuery();
-        await ctx.reply(`✅ Biển số ${unverified.plateId} không có vi phạm)`);
+        await ctx.reply(`✅ Biển số ${unverified.plateId} không có vi phạm`);
+        return;
       }
       const plate = await Plate.findById(id);
       if (!plate) {
         await ctx.answerCallbackQuery({ text: '❌ Không tìm thấy biển số', show_alert: true });
+        return;
       }
       const violations = await Violatio.find({ plate }).sort({ timeOfViolation: -1 }).populate('plate');
       if (violations.length === 0) {
         await ctx.answerCallbackQuery();
-        await ctx.reply(`✅ Biển số ${plate?.plateNumber} không có vi phạm)`);
+        await ctx.reply(`✅ Biển số ${plate?.plateNumber} không có vi phạm`);
+        return;
       }
 
       await ctx.answerCallbackQuery();
