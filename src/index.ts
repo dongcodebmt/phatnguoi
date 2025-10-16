@@ -7,6 +7,6 @@ import { MONGO_URI } from './constants/config';
         console.log('🚀 Connected to MongoDB');
 
         const jobs = new JobsService();
-        await jobs.upsertDailyScheduler();
+        await jobs.init();
     });
 })();
