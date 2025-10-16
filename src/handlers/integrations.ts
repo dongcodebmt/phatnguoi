@@ -251,7 +251,7 @@ export class Integraions {
 
   private async deletePlate(user: IUser, id: string): Promise<IPlate | undefined> {
     let plate: IPlate | undefined = undefined;
-    const register = await Register.findOne({ user, plate: id });
+    const register = await Register.findOne({ user, plate: id }).populate('plate');
     if (register) {
       plate = register.plate as IPlate;
       await register.deleteOne().exec();
