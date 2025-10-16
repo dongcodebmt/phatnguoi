@@ -170,9 +170,10 @@ export class JobsService {
         const condition = new Date();
         condition.setDate(now.getDate() - days);
 
-        const violations = await Violation.find({ createdAt: { $gte: condition } });
+        const violations = await Violation.find({ createdAt: { $gte: condition } }).populate('plate');
         for (const violation of violations) {
-          const registers = await Register.find({ plate: violation.plate }).populate('user');
+          const plate = violation.plate as IPlate;
+          const registers = await Register.find({ plate: plate }).populate('user');
           for (const register of registers) {
             const user = register.user as IUser;
             await this.sendNotifyQueue.add(this.sendNotifyQueueId, { user, violation }, this.queueOpts);
